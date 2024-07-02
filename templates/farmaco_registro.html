@@ -1,0 +1,32 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+<form method="POST" action="{{ url_for('agregar_farmaco') }}">
+    <label for="nombre">Nombre del Fármaco:</label>
+    <input type="text" id="nombre" name="nombre" required>
+
+    <label for="tipo_id">Tipo:</label>
+    <select id="tipo_id" name="tipo_id" required>
+        {% for tipo in tipos %}
+        <option value="{{ tipo[0] }}">{{ tipo[1] }}</option>
+        {% endfor %}
+    </select>
+
+    <label for="marca_id">Marca:</label>
+    <select id="marca_id" name="marca_id" required>
+        {% for marca in marcas %}
+        <option value="{{ marca[0] }}">{{ marca[1] }}</option>
+        {% endfor %}
+    </select>
+
+    <label for="ubicacion_id">Ubicación:</label>
+    <select id="ubicacion_id" name="ubicacion_id" required>
+        {% for ubicacion in ubicaciones %}
+        <option value="{{ ubicacion[0] }}">{{ ubicacion[1] }}</option>
+        {% endfor %}
+    </select>
+
+    <button type="submit">Agregar</button>
+</form>
+{% endblock %}

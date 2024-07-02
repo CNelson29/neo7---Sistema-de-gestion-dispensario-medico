@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Gestión de Ubicaciones</h2>
+<form method="POST" action="{{ url_for('agregar_ubicacion') }}">
+    <label for="nombre">Nombre de la Ubicación:</label>
+    <input type="text" id="nombre" name="nombre" required>
+    <button type="submit">Agregar</button>
+</form>
+<table>
+    <tr>
+        <th>ID</th>
+        <th>Ubicación</th>
+        <th>Acciones</th>
+    </tr>
+    {% for ubicacion in ubicaciones %}
+    <tr>
+        <td>{{ ubicacion[0] }}</td>
+        <td>{{ ubicacion[1] }}</td>
+        <td>
+            <a href="{{ url_for('eliminar_ubicacion', id=ubicacion[0]) }}">Eliminar</a>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+{% endblock %}

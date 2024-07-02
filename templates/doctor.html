@@ -1,0 +1,95 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Gestión de Doctores</h2>
+
+<!-- Botón en forma de cruz para abrir la ventana modal -->
+<button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addClientModal">
+    &#x271A; <!-- Cruz -->
+</button>
+
+<!-- Tabla de pacientes -->
+<table>
+    <tr>
+        <th>ID</th>
+        <th>Nombre</th>
+        <th>Cedula</th>
+        <th>Horario</th>
+        <th>Especialidad</th>
+        <th>Estado</th>
+        <th>Email</th>
+        <th>Acciones</th>
+    </tr>
+    {% for doctor in doctores %}
+    <tr>
+        <td>{{ doctor[0] }}</td>
+        <td>{{ doctor[1] }}</td>
+        <td>{{ doctor[2] }}</td>
+        <td>{{ doctor[3] }}</td>
+        <td>{{ doctor[4] }}</td>
+        <td>{{ doctor[5] }}</td>
+        <td>{{ doctor[6] }}</td>
+        <td>
+            <a href="{{ url_for('eliminar_doctores', id=doctor[0]) }}">Eliminar</a>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+<!-- Ventana Modal para agregar un cliente -->
+<div class="modal fade" id="addClientModal" tabindex="-1" aria-labelledby="addClientModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addClientModalLabel">Agregar Cliente</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form action="{{ url_for('agregar_doctores') }}" method="post">
+                    <div class="form-group">
+                        <label for="nombre">Nombre</label>
+                        <input type="text" class="form-control" id="nombre" name="nombre" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="cedula">Cédula</label>
+                        <input type="text" class="form-control" id="cedula" name="cedula" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="tanda">Horario</label>
+                        <select id="tanda" class="form-control" name="tanda" required>
+                            <option value="8AM - 12PM">8AM - 12PM</option>
+                            <option value="1PM - 5PM">1PM - 5PM</option>
+                            <option value="6PM - 10PM">6PM - 10PM</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="ciudad">Contraseña</label>
+                        <input type="text" class="form-control" id="password" name="password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="calle">Especialidad</label>
+                        <input type="text" class="form-control" id="especialidad" name="especialidad" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="estado">Estado</label>
+                        <select id="estado" class="form-control" name="estado" required>
+                            <option value="Inactivo">Inactivo</option>
+                            <option value="Activo">Ativo</option>
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">Agregar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- fin -->
+{% endblock %}

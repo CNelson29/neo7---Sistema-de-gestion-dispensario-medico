@@ -1,0 +1,38 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Gestión de Tipos de Pacientes</h2>
+<form method="POST" action="{{ url_for('agregar_paciente') }}">
+    <label for="nombre">Nombre del paciente:</label>
+    <input type="text" id="nombre" name="nombre" placeholder="First name" required>
+    <input type="text" id="nombre" name="nombre" placeholder="Last name" required>
+    <label for="cedula">No. cedula:</label>
+    <input type="text" id="cedula" name="cedula" placeholder="Cedula" required>
+    <label for="carnet">No. Carnet:</label>
+    <input type="number" id="carnet" name="carnet" placeholder="Carnet" required>
+
+    <label for="inputEmail4">Email</label>
+    <input type="email" class="form-control" id="email" name="email" placeholder="Email"required>
+    
+    <label for="inputPassword4">Password</label>
+    <input type="password" class="form-control" id="password" name="password" placeholder="Password"required>
+
+    <label for="inputAddress">Calle</label>
+    <input type="text" class="form-control" id="calle" name="calle" placeholder="1234 Main St"required>
+    <label for="inputAddress2">localidad</label>
+    <input type="text" class="form-control" id="localidad" name="localidad" placeholder="Apartment, studio, or floor" required>
+    
+    <label for="inputCity">Ciudad</label>
+    <input type="text" class="form-control" id="ciudad" name="ciudad"  required>
+    
+    <label for="inputState">Tipo de enfermedad</label>
+    <select id="inputState" class="form-control" name="tipoPaciente" required>
+        <option selected>Interna</option>
+        <option selected>Neurologica</option>
+        <option selected>Patologica</option>
+    </select>
+    
+    <button type="submit">Agregar</button>
+</form>
+{% endblock %}

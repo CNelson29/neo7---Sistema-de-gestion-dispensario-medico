@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Gestión de Marcas</h2>
+<form method="POST" action="{{ url_for('agregar_marca') }}">
+    <label for="nombre">Nombre de la Marca:</label>
+    <input type="text" id="nombre" name="nombre" required>
+    <button type="submit">Agregar</button>
+</form>
+<table>
+    <tr>
+        <th>ID</th>
+        <th>Nombre</th>
+        <th>Acciones</th>
+    </tr>
+    {% for marca in marcas %}
+    <tr>
+        <td>{{ marca[0] }}</td>
+        <td>{{ marca[1] }}</td>
+        <td>
+            <a href="{{ url_for('eliminar_marca', id=marca[0]) }}">Eliminar</a>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+{% endblock %}
