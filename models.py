@@ -1,7 +1,7 @@
 from flask_mysqldb import MySQL
-from flask import current_app as app
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask import current_app as app
 
 mysql = MySQL()
 
@@ -22,22 +22,27 @@ def execute_db(query, args=()):
     cur.close()
 
 class User(UserMixin):
-    def __init__(self, id, name, email, password, is_admin=False):
+    def __init__(self, id, name, email, password_hash, is_admin=False):
         self.id = id
         self.name = name
         self.email = email
-        self.password = generate_password_hash(password)
+        self.password_hash = password_hash
         self.is_admin = is_admin
+
     def set_password(self, password):
-        self.password = generate_password_hash(password)
+        self.password_hash = generate_password_hash(password)
+
     def check_password(self, password):
-        return check_password_hash(self.password, password)
+        return check_password_hash(self.password_hash, password)
+
     def __repr__(self):
         return '<User {}>'.format(self.email)
-users = []
 
 def get_user(email):
-    for user in users:
-        if user.email == email:
-            return user
+    user_data = query_db('SELECT * FROM usuarios WHERE email = %s', (email,), one=True)
+    if user_data:
+        # Unpack the tuple into individual variables
+        id, name, email, password_hash, is_admin = user_data
+        return User(id, name, email, password_hash, is_admin)
     return None
+

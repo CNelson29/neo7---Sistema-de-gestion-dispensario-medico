@@ -1,12 +1,16 @@
-from flask import Flask, render_template, request, redirect, session, url_for, flash
+from urllib.parse import urlparse
+from flask import Flask, make_response, render_template, request, redirect, session, url_for, flash ,send_file
 from config import Config
 from forms import LoginForm, SignupForm
 from models import User, mysql, init_db, query_db, execute_db
-from flask_login import LoginManager,current_user, get_user, login_user
-from models import users
-from werkzeug.urls import url_parse
-
-#---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+from flask_login import LoginManager,current_user, login_user, logout_user
+from models import User,get_user
+from io import BytesIO
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.units import inch
+from reportlab.lib import colors
+from reportlab.pdfgen import canvas
+#-------------------------------------------------------------------------------------------------------v--------------------------------------------------------------------
 app = Flask(__name__)
 app.config.from_object(Config)
 init_db(app)
@@ -160,40 +164,31 @@ def eliminar_doctores(id):
     flash('Tipo de fármaco eliminado exitosamente')
     return redirect(url_for('doctores'))
 
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if current_user.is_authenticated:
-        return redirect(url_for('index'))
-    form = LoginForm()
-    if form.validate_on_submit():
-        user = get_user(form.email.data)
-        if user is not None and user.check_password(form.password.data):
-            login_user(user, remember=form.remember_me.data)
-            next_page = request.args.get('next')
-            if not next_page or url_parse(next_page).netloc != '':
-                next_page = url_for('index')
-            return redirect(next_page)
-    return render_template('login_form.html', form=form)
+#------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ parte usuarios y logeo
+
+
+
+
 
 @app.route("/signup/", methods=["GET", "POST"])
 def show_signup_form():
     if current_user.is_authenticated:
-        return redirect(url_for('index'))
+        return redirect(url_for('home'))
     form = SignupForm()
     if form.validate_on_submit():
         name = form.name.data
         email = form.email.data
         password = form.password.data
         # Creamos el usuario y lo guardamos
-        user = User(len(users) + 1, name, email, password)
-        users.append(user)
+        user = User(len(user) + 1, name, email, password)
+        user.append(user)
         # Dejamos al usuario logueado
         login_user(user, remember=True)
         next_page = request.args.get('next', None)
-        if not next_page or url_parse(next_page).netloc != '':
-            next_page = url_for('index')
+        if not next_page or urlparse(next_page).netloc != '':
+            next_page = url_for('home')
         return redirect(next_page)
-    return render_template("signup_form.html", form=form)
+    return render_template("registro.html", form=form)
 
 # Ruta para mostrar el formulario de registro
 @app.route('/REGISTRO')
@@ -203,15 +198,15 @@ def registro():
 # Ruta para manejar el registro de cuentas
 @app.route('/ACCESO-REGISTRO', methods=['POST'])
 def acceso_registro():
-    anynombre = request.form['nombre']
-    anycorreo = request.form['correo']
-    anypassword = request.form['password']
-    any_password = request.form['password2']
-    if anypassword == any_password:
-        execute_db('INSERT INTO usuarios (nombre, email, password) VALUES (%s, %s, %s)', (anynombre, anycorreo, anypassword))
+    email = request.form['email']
+    password = request.form['password']
+    confirm_password = request.form['confirm_password']
+    if password == confirm_password:
+        execute_db('INSERT INTO usuarios (email, password) VALUES (%s, %s)', (email, password))
         return redirect(url_for('registro'))
     else:
         return render_template('registro.html', mensaje='No coinciden las contraseñas ingresadas')
+
 
 # Ruta para manejar el login
 @app.route('/ACCESO-LOGIN', methods=['GET', 'POST'])
@@ -229,19 +224,268 @@ def acceso_login():
             return render_template('login.html', mensaje='Credenciales inválidas')
     return redirect(url_for('home'))
 
+@app.route('/login', methods=['GET', 'POST'])
+def loginFrom():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    
+    form = LoginForm()
+    if form.validate_on_submit():
+        user = get_user(form.email.data)
+        if user is not None and user.check_password(form.password.data):
+            login_user(user, remember=form.remember_me.data)
+            next_page = request.args.get('next')
+            if not next_page or urlparse(next_page).netloc != '':
+                next_page = url_for('index')
+            return redirect(next_page)
+        else:
+            flash('Credenciales inválidas', 'danger')
+    
+    return render_template('login.html', form=form)
+
 # Ruta para el índice o página principal después del login
 @app.route('/')
 def index():
-    if 'logueado' in session:
+    if current_user.is_authenticated:
         return redirect(url_for('home'))
-    return redirect(url_for('login'))
+    return redirect(url_for('loginFrom'))
+# cierre de seccion 
+@app.route('/logout')
+def logout():
+    logout_user()
+    return redirect(url_for('loginFrom'))
 
 @login_manager.user_loader
 def load_user(user_id):
-    for user in users:
+    for user in user:
         if user.id == int(user_id):
             return user
     return None
+#--------------------------------------------------------------------------------------------------------------------------------------------------PDF
+# Ruta para generar PDF de doctores
+@app.route('/generate_pdf/doctores', methods=['GET'])
+def generate_pdf_doctores():
+    doctores = query_db('SELECT * FROM medicos')
+
+    buffer = BytesIO()
+    p = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+
+    # Título del documento
+    p.setFont("Helvetica-Bold", 16)
+    p.drawString(200, height - 50, 'Reporte de Doctores')
+    
+    # Encabezados de la tabla
+    p.setFont("Helvetica-Bold", 12)
+    p.drawString(50, height - 80, "ID")
+    p.drawString(100, height - 80, "Nombre")
+    p.drawString(200, height - 80, "Cédula")
+    p.drawString(300, height - 80, "Tanda labor")
+    p.drawString(400, height - 80, "Especialidad")
+    p.drawString(500, height - 80, "Estado")
+    p.drawString(600, height - 80, "Email")
+
+    # Dibujar una línea debajo de los encabezados
+    p.line(50, height - 90, 700, height - 90)
+
+    y_offset = height - 110
+    p.setFont("Helvetica", 10)
+
+    for doctor in doctores:
+        p.drawString(50, y_offset, str(doctor[0]))
+        p.drawString(100, y_offset, str(doctor[1]))
+        p.drawString(200, y_offset, str(doctor[2]))
+        p.drawString(300, y_offset, str(doctor[3]))
+        p.drawString(400, y_offset, str(doctor[4]))
+        p.drawString(500, y_offset, str(doctor[5]))
+        p.drawString(600, y_offset, str(doctor[6]))
+        
+        # Dibujar líneas divisorias
+        p.line(50, y_offset + 10, 50, y_offset - 10)
+        p.line(100, y_offset + 10, 100, y_offset - 10)
+        p.line(200, y_offset + 10, 200, y_offset - 10)
+        p.line(300, y_offset + 10, 300, y_offset - 10)
+        p.line(400, y_offset + 10, 400, y_offset - 10)
+        p.line(500, y_offset + 10, 500, y_offset - 10)
+        p.line(600, y_offset + 10, 600, y_offset - 10)
+        p.line(700, y_offset + 10, 700, y_offset - 10)
+
+        y_offset -= 20
+
+        if y_offset < 50:  # Agregar nueva página si el espacio se acaba
+            p.showPage()
+            y_offset = height - 50
+            # Dibujar nuevamente el encabezado en la nueva página
+            p.setFont("Helvetica-Bold", 12)
+            p.drawString(50, y_offset, "ID")
+            p.drawString(100, y_offset, "Nombre")
+            p.drawString(200, y_offset, "Cédula")
+            p.drawString(300, y_offset, "Tanda labor")
+            p.drawString(400, y_offset, "Especialidad")
+            p.drawString(500, y_offset, "Estado")
+            p.drawString(600, y_offset, "Email")
+            
+            p.line(50, y_offset - 10, 700, y_offset - 10)
+            y_offset -= 30
+
+    p.save()
+    buffer.seek(0)
+
+    return send_file(buffer, as_attachment=True, download_name='reporte_doctores.pdf', mimetype='application/pdf')
+
+# Ruta para generar PDF de fármacos
+@app.route('/generate_pdf/farmacos', methods=['GET'])
+def generate_pdf_farmacos():
+    pacientes = query_db('SELECT * FROM pacientes')
+
+    buffer = BytesIO()
+    p = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+
+    # Título del documento
+    p.setFont("Helvetica-Bold", 16)
+    p.drawString(200, height - 50, 'Reporte de Farmacos')
+    
+    # Encabezados de la tabla
+    p.setFont("Helvetica-Bold", 12)
+    p.drawString(50, height - 80, "ID")
+    p.drawString(100, height - 80, "Nombre")
+    p.drawString(200, height - 80, "Cédula")
+    p.drawString(300, height - 80, "Carnet")
+    p.drawString(400, height - 80, "Tipo")
+    p.drawString(500, height - 80, "Email")
+
+    # Dibujar una línea debajo de los encabezados
+    p.line(50, height - 90, 550, height - 90)
+
+    y_offset = height - 110
+    p.setFont("Helvetica", 10)
+
+    for paciente in pacientes:
+        p.drawString(50, y_offset, str(paciente[0]))
+        p.drawString(100, y_offset, str(paciente[1]))
+        p.drawString(200, y_offset, str(paciente[2]))
+        p.drawString(300, y_offset, str(paciente[3]))
+        p.drawString(400, y_offset, str(paciente[4]))
+        p.drawString(500, y_offset, str(paciente[5]))
+        y_offset -= 20
+        if y_offset < 50:  # Agregar nueva página si el espacio se acaba
+            p.showPage()
+            y_offset = height - 50
+            # Dibujar nuevamente el encabezado en la nueva página
+            p.setFont("Helvetica-Bold", 12)
+            p.drawString(50, y_offset, "ID")
+            p.drawString(100, y_offset, "Nombre")
+            p.drawString(200, y_offset, "Cédula")
+            p.drawString(300, y_offset, "Carnet")
+            p.drawString(400, y_offset, "Tipo")
+            p.drawString(500, y_offset, "Email")
+            p.line(50, y_offset - 10, 550, y_offset - 10)
+            y_offset -= 30
+
+    p.save()
+    buffer.seek(0)
+
+    return send_file(buffer, as_attachment=True, download_name='pacientes.pdf', mimetype='application/pdf')
+
+# Ruta para generar PDF de marcas
+@app.route('/generate_pdf/marcas', methods=['GET'])
+def generate_pdf_marcas():
+    marcas = query_db('SELECT * FROM marcas')
+
+    buffer = BytesIO()
+    p = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+
+    # Título del documento
+    p.setFont("Helvetica-Bold", 16)
+    p.drawString(200, height - 50, 'Reporte de Marcas')
+    
+    # Encabezados de la tabla
+    p.setFont("Helvetica-Bold", 12)
+    p.drawString(50, height - 80, "ID")
+    p.drawString(100, height - 80, "Nombre")
+
+    # Dibujar una línea debajo de los encabezados
+    p.line(50, height - 90, 550, height - 90)
+
+    y_offset = height - 110
+    p.setFont("Helvetica", 10)
+
+    for marca in marcas:
+        p.drawString(50, y_offset, str(marca[0]))
+        p.drawString(100, y_offset, str(marca[1]))
+        y_offset -= 20
+        if y_offset < 50:  # Agregar nueva página si el espacio se acaba
+            p.showPage()
+            y_offset = height - 50
+            # Dibujar nuevamente el encabezado en la nueva página
+            p.setFont("Helvetica-Bold", 12)
+            p.drawString(50, y_offset, "ID")
+            p.drawString(100, y_offset, "Nombre")
+            p.line(50, y_offset - 10, 550, y_offset - 10)
+            y_offset -= 30
+
+    p.save()
+    buffer.seek(0)
+
+    return send_file(buffer, as_attachment=True, download_name='marcas.pdf', mimetype='application/pdf')
+
+@app.route('/generate_pdf/pacientes', methods=['GET'])
+def generate_pdf_pacientes():
+    pacientes = query_db('SELECT * FROM pacientes')
+
+    buffer = BytesIO()
+    p = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+
+    # Título del documento
+    p.setFont("Helvetica-Bold", 16)
+    p.drawString(200, height - 50, 'Reporte de Pacientes')
+    
+    # Encabezados de la tabla
+    p.setFont("Helvetica-Bold", 12)
+    p.drawString(50, height - 80, "ID")
+    p.drawString(100, height - 80, "Nombre")
+    p.drawString(200, height - 80, "Cédula")
+    p.drawString(300, height - 80, "Carnet")
+    p.drawString(400, height - 80, "Tipo")
+    p.drawString(500, height - 80, "Email")
+
+    # Dibujar una línea debajo de los encabezados
+    p.line(50, height - 90, 550, height - 90)
+
+    y_offset = height - 110
+    p.setFont("Helvetica", 10)
+
+    for paciente in pacientes:
+        p.drawString(50, y_offset, str(paciente[0]))
+        p.drawString(100, y_offset, str(paciente[1]))
+        p.drawString(200, y_offset, str(paciente[2]))
+        p.drawString(300, y_offset, str(paciente[3]))
+        p.drawString(400, y_offset, str(paciente[4]))
+        p.drawString(500, y_offset, str(paciente[5]))
+        y_offset -= 20
+        if y_offset < 50:  # Agregar nueva página si el espacio se acaba
+            p.showPage()
+            y_offset = height - 50
+            # Dibujar nuevamente el encabezado en la nueva página
+            p.setFont("Helvetica-Bold", 12)
+            p.drawString(50, y_offset, "ID")
+            p.drawString(100, y_offset, "Nombre")
+            p.drawString(200, y_offset, "Cédula")
+            p.drawString(300, y_offset, "Carnet")
+            p.drawString(400, y_offset, "Tipo")
+            p.drawString(500, y_offset, "Email")
+            p.line(50, y_offset - 10, 550, y_offset - 10)
+            y_offset -= 30
+
+    p.save()
+    buffer.seek(0)
+
+    return send_file(buffer, as_attachment=True, download_name='pacientes.pdf', mimetype='application/pdf')
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)
